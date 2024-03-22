@@ -1,6 +1,7 @@
-import System.IO
+-- import System.IO
 import System.Random
 import Data.Char (isSpace)
+import System.Exit (exitSuccess)
 
 
 data Player = Player
@@ -9,6 +10,8 @@ data Player = Player
     , playerAttack :: Int
     , playerDefense :: Int
     , defending :: Bool
+    , playerExperience :: Int
+    , playerLevel :: Int
     }
 
 data Enemy = Enemy
@@ -17,6 +20,8 @@ data Enemy = Enemy
     , enemyAttack :: Int
     , enemyDefense :: Int
     , dropsHealingItem :: Bool
+    , enemyDropExperience :: Int
+    , enemyLevel :: Int
     }
 
 -- Game initialization
@@ -53,6 +58,8 @@ createPlayer name = Player
     , playerAttack = 20
     , playerDefense = 3
     , defending = False  -- Initially not defending
+    , playerExperience = 0
+    , playerLevel = 1
     }
 
 -- Explore different locations
@@ -60,6 +67,7 @@ createPlayer name = Player
 explore :: Player -> IO ()
 explore player = do
     putStrLn "You are in a forest."
+    putStrLn $ "Your level is " ++ show (playerLevel player)
     putStrLn "1. Look for enemies"
     putStrLn "2. Use campfire"
     putStrLn "3. Quit"
@@ -67,6 +75,12 @@ explore player = do
     case choice of
         "1" -> do
             enemy <- generateEnemy
+            if enemyLevel enemy > playerLevel player
+            then do
+                putStrLn "The enemy's level is higher than yours."
+                putStrLn "You should level up or look for another enemy."
+                explore player
+            else battle player enemy
             putStrLn $ "You encountered a " ++ enemyName enemy ++ "!"
             battle player enemy
         "2" -> do
@@ -74,10 +88,11 @@ explore player = do
             putStrLn "You feel rejuvenated by the warmth of the campfire."
             putStrLn $ "Your health is " ++ show (playerHealth player') ++ " hp."
             explore player'
-        "3" -> putStrLn "Goodbye!"
+        "3" -> do
+            putStrLn "Goodbye!"
+            exitSuccess
         _ -> do
             putStrLn "Invalid choice."
-            explore player
 
 
 -- Battle sequence
@@ -92,6 +107,13 @@ battleLoop player enemy
     | playerHealth player <= 0 = putStrLn "You were defeated!"
     | enemyHealth enemy <= 0 = do
         putStrLn $ "You defeated the " ++ enemyName enemy ++ "!"
+        let player' = player { playerExperience = playerExperience player + enemyDropExperience enemy }
+        if playerExperience player' >= 100
+            then do
+                let player'' = player' { playerExperience = playerExperience player' - 100, playerLevel = playerLevel player' + 1 }
+                putStrLn $ "Congratulations! You leveled up to level " ++ show (playerLevel player'') ++ "!"
+                explore player''
+            else explore player'
         if dropsHealingItem enemy
             then do
                 putStrLn "The enemy dropped a healing item!"
@@ -143,7 +165,7 @@ enemyAttackLoop player enemy =
 
 generateEnemy :: IO Enemy
 generateEnemy = do
-    let enemies = [Enemy "AnotherOne" 30 6 3 False, Enemy "GODDID" 43 8 4 True, Enemy "DJ Khaled" 60 11 7 False]
+    let enemies = [Enemy "AnotherOne" 30 6 3 False 30 1 , Enemy "GODDID" 43 8 4 True 50 2, Enemy "DJ Khaled" 60 11 7 False 100 5]
     randomIndex <- randomRIO (0, length enemies - 1)
     return $ enemies !! randomIndex
 
