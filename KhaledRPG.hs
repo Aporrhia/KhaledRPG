@@ -1,12 +1,12 @@
 import System.IO
 import System.Random
 import System.Directory (doesFileExist)
+import System.Exit (exitSuccess)
 import Control.Exception (tryJust)
 import Control.Monad (guard, when)
-import Data.Char (toUpper, isSpace)  -- Import isSpace
+import Data.Char (toUpper, isSpace)
 import Text.Read (readMaybe)
 import System.IO.Error (isDoesNotExistError)
-import System.Exit (exitSuccess)  -- Import exitSuccess
 
 data Player = Player
     { playerName :: String
@@ -71,11 +71,11 @@ loadGame playerName = do
             putStrLn $ "No saved game found for " ++ playerName ++ ". Starting new game."
             return Nothing
 
--- Modify main function
+-- Main function
 main :: IO ()
 main = do
     putStrLn "Welcome to Khaled RPG!"
-    putStrLn "Enter your character's name:"
+    putStrLn "Enter your character's name (Name must not be empty and should not contain spaces):"
     name <- getLine
     existingPlayer <- loadGame name
     case existingPlayer of
@@ -94,14 +94,22 @@ main = do
 -- Function to start a new game
 startNewGame :: String -> FilePath -> IO ()
 startNewGame name saveFileName = do
-    let player = createPlayer name
-    putStrLn $ "Welcome, " ++ playerName player ++ "!"
-    putStrLn "Let's embark on an adventure..."
-    explore player saveFileName
+    let trimmedName = trim name
+    if isValidName trimmedName
+        then do
+            let player = createPlayer trimmedName
+            putStrLn $ "Welcome, " ++ playerName player ++ "!"
+            putStrLn "Let's embark on an adventure..."
+            explore player saveFileName
+        else do
+            putStrLn "Invalid name. Name must not be empty and should not contain spaces."
+            putStrLn "Please enter a valid name:"
+            newName <- getLine
+            startNewGame newName saveFileName
 
 -- Check if the entered name is valid
 isValidName :: String -> Bool
-isValidName name = not (null (trim name))
+isValidName name = not (null (trim name)) && not (any isSpace name)
 
 -- Trim leading and trailing spaces
 trim :: String -> String
